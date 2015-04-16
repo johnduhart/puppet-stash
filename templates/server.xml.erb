@@ -81,6 +81,9 @@
 <% end -%>
         />
 
+        <Connector port="7991" connectionTimeout="20000" maxThreads="200" minSpareThreads="10"
+                   enableLookups="false" acceptCount="10" URIEncoding="UTF-8" />
+
         <!-- A "Connector" using the shared thread pool-->
         <!--
         <Connector executor="tomcatThreadPool"
