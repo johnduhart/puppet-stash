@@ -1,13 +1,14 @@
 {
   "name": "puppet-stash",
-  "version": "1.2.2",
-  "author": "puppetcommunity",
+  "version": "2.0.0",
+  "author": "puppet",
   "summary": "Install Atlassian stash",
   "license": "MIT",
-  "source": "https://github.com/puppet-community/puppet-stash.git",
-  "project_page": "https://github.com/puppet-community/puppet-stash",
-  "issues_url": "https://github.com/puppet-community/puppet-stash/issues",
+  "source": "https://github.com/voxpupuli/puppet-stash.git",
+  "project_page": "https://github.com/voxpupuli/puppet-stash",
+  "issues_url": "https://github.com/voxpupuli/puppet-stash/issues",
   "description": "Module to install Atlassian Stash. On-premises source code management for Git that's secure, fast, and enterprise grade.",
+  "tags": ["stash"],
   "operatingsystem_support": [
     {
       "operatingsystem": "RedHat",
@@ -43,12 +44,20 @@
       "version_requirement": ">= 4.0.0"
     },
     {
+      "name": "puppetlabs/inifile",
+      "version_requirement": ">= 1.0.0"
+    },
+    {
       "name": "mkrakowitzer/deploy",
       "version_requirement": ">= 0.0.3"
     },
     {
-      "name": "nanliu/staging",
+      "name": "puppet/staging",
       "version_requirement": ">= 1.0.0"
+    },
+    {
+      "name": "voxpupuli/archive",
+      "version_requirement": ">= 0.4.4"
     },
     {
       "name": "yguenane/repoforge",

@@ -25,12 +25,14 @@ class stash::gc(
   $homedir = $stash::homedir,
   ) {
 
-  include stash::params
+  include ::stash::params
 
-  if versioncmp($::stash_version, '3.2') < 0 {
-    $shared = ''
-  } else {
-    $shared = '/shared'
+  if $::stash_version {
+    if versioncmp($::stash_version, '3.2') < 0 {
+      $shared = ''
+    } else {
+      $shared = '/shared'
+    }
   }
 
   file { $path:

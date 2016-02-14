@@ -1,6 +1,8 @@
 #puppet-stash
 [![Puppet Forge](http://img.shields.io/puppetforge/v/puppet/stash.svg)](https://forge.puppetlabs.com/puppet/stash)
-[![Build Status](https://travis-ci.org/puppet-community/puppet-stash.svg?branch=master)](https://travis-ci.org/puppet-community/puppet-stash)
+[![Build Status](https://travis-ci.org/voxpupuli/puppet-stash.svg?branch=master)](https://travis-ci.org/voxpupuli/puppet-stash)
+
+:warning: This module is going through a number of changes in preparation for version 4 (Bitbucket-server). It is recommended to use the puppet-forge versions and not the github master branch.
 
 ####Table of Contents
 
@@ -22,9 +24,14 @@
 
 This is a puppet module to install Atlassian Stash. On-premises source code management for Git that's secure, fast, and enterprise grade.
 
+|Module Version   | Support Stash versions  |
+|-----------------|-------------------------|
+| 1.3.0           | 3.0.0 - 3.9.2           |
+| 2.0.0           | 3.9.2 - 4.x.x           |
+
 ##Module Description
 
-This module installs/upgrades Atlassian's Enterprise source code management tool. The Stash module also manages the stash configuration files with Puppet. 
+This module installs/upgrades Atlassian's Enterprise source code management tool. The Stash module also manages the stash configuration files with Puppet.
 
 ##Setup
 <a name="Stash-prerequisites">
@@ -38,12 +45,12 @@ This module installs/upgrades Atlassian's Enterprise source code management tool
 ###What Stash affects
 If installing to an existing Stash instance, it is your responsibility to backup your database. We also recommend that you backup your Stash home directory and that you align your current Stash version with the version you intend to use with puppet Stash module.
 
-You must have your database setup with the account user that Stash will use. This can be done using the puppetlabs-postgresql and puppetlabs-mysql modules.
+You must have your database setup with the account user that Stash will use. This can be done using the puppetlabs-postgresql and puppetlabs-mysql modules. The mysql java connector can be installed using the [puppet/mysql_java_connector](https://forge.puppetlabs.com/puppet/mysql_java_connector) module.
 
 When using this module to upgrade Stash, please make sure you have a database/Stash home backup. We plan to include a class for backing up the stash home directory in a future release.
 
-As RHEL 6 and its derivatives do not include a version of git that will work by default with stash. We enable the repoforge module as a default if it is not already enabled. Whilst this is not best practice, it is better than the module not working for inexperienced users. By default we will upgrade git if it is already installed and the repoforge repository is not enabled. Default: true. You can turn all this functionality off with 'repoforge => false' and manage git outside of the module.
-	
+When upgrading stash from < 3.8.0 to >= 3.8.0 puppet will notify the stash service to restart for two puppet runs. This is because the stash upgrade makes file attribute and content changes to the stash-config.properties. See issue #74
+
 ###Beginning with Stash
 This puppet module will automatically download the Stash tar.gz from Atlassian and extracts it into /opt/stash/atlassian-stash-$version. The default Stash home is /home/stash.
 
@@ -73,15 +80,17 @@ Enable external facts for stash version.
 Enable a stash backup
 ```puppet
   class { 'stash':
-    backup_ensure       => present,
-    backupclientVersion => '1.6.0',
-    backup_home         => '/opt/stash-backup',
-    backupuser          => 'admin',
-    backuppass          => 'password',
+    backup_ensure          => present,
+    backupclient_version    => '1.6.0',
+    backup_home            => '/opt/stash-backup',
+    backupuser             => 'admin',
+    backuppass             => 'password',
+    backup_keep_age        => '3d',
+    backup_schedule_hour   => '5',
+    backup_schedule_minute => '0',
   }
 ```
 
-A complete example with postgres/nginx/stash is available [here](https://github.com/mkrakowitzer/vagrant-puppet-stash/blob/master/manifests/site.pp) or in the examples directory.
 <a name="upgrades">
 #####Upgrades
 
@@ -105,15 +114,6 @@ If the stash service is managed outside of puppet the stop_stash paramater can b
   }
   class { 'stash::facts': }
 ```
-######Upgrades to the Stash puppet Module
-mkrakowitzer-deploy has been replaced with nanliu-staging as the default module for deploying the Stash binaries. You can still use mkrakowitzer-deploy with the *staging_or_deploy => 'deploy'*. nanliu-staging can not cleanup after itself, you may need to prune your /opt/staging directory if you upgrade often.
-
-```puppet
-  class { 'stash':
-    javahome          => '/opt/java',
-    staging_or_deploy => 'deploy',
-  }
-```
 
 ##Usage
 
@@ -129,7 +129,7 @@ This is especially useful for setting properties such as HTTP/https proxy settin
     installdir     => '/opt/atlassian/atlassian-stash',
     homedir        => '/opt/atlassian/application-data/stash-home',
     javahome       => '/opt/java',
-    downloadURL    => 'http://example.co.za/pub/software/development-tools/atlassian/',
+    download_url    => 'http://example.co.za/pub/software/development-tools/atlassian/',
     dburl          => 'jdbc:postgresql://dbvip.example.co.za:5433/stash',
     dbpassword     => $stashpass,
     service_manage => false,
@@ -141,13 +141,13 @@ This is especially useful for setting properties such as HTTP/https proxy settin
       proxyName    => 'stash.example.co.za',
       proxyPort    => '443',
     },
-    staging_or_deploy => 'deploy',
+    tomcat_port    => '7991'
   }
   class { 'stash::facts': }
   class { 'stash::gc': }
 ```
 
-### A Hiera example 
+### A Hiera example
 
 This example is used in production for 500 users in an traditional enterprise environment. Your mileage may vary. The dbpassword can be stored using eyaml hiera extension.
 
@@ -159,7 +159,7 @@ stash::homedir:        '/opt/atlassian/application-data/stash-home'
 stash::javahome:       '/opt/java'
 stash::dburl:          'jdbc:postgresql://dbvip.example.co.za:5433/stash'
 stash::service_manage: false
-stash::downloadURL:    'http://example.co.za/pub/software/development-tools/atlassian'
+stash::download_url:    'http://example.co.za/pub/software/development-tools/atlassian'
 stash::jvm_xms:        '1G'
 stash::jvm_xmx:        '4G'
 stash::java_opts: >
@@ -176,7 +176,6 @@ stash::proxy:
   scheme:     'https'
   proxyName:  'stash.example.co.za'
   proxyPort:  '443'
-stash::staging_or_deploy: 'deploy'
 stash::stash_stop: '/usr/sbin crm resource stop stash'
 ```
 
@@ -210,6 +209,9 @@ The format of the file stash will be installed from. Default: 'tar.gz'
 The installation directory of the stash binaries. Default: '/opt/stash'
 #####`homedir`
 The home directory of stash. Configuration files are stored here. Default: '/home/stash'
+#####`manage_usr_grp`
+Whether or not this module will manage the stash user and group associated with the install. 
+You must either allow the module to manage both aspects or handle both outside the module. Default: true
 #####`user`
 The user that stash should run as, as well as the ownership of stash related files. Default: 'stash'
 #####`group`
@@ -221,6 +223,8 @@ Specify a gid of the stash user: Default: undef
 #####`context_path`
 Specify context path, defaults to ''.
 If modified, Once Stash has started, go to the administration area and click Server Settings (under 'Settings'). Append the new context path to your base URL.
+#####`tomcat_port`
+Specify the port that you wish to run tomcat under, defaults to 7990
 
 ####database parameters####
 
@@ -253,8 +257,10 @@ Reverse https proxy configuration. See examples for more detail. Default: {}
 
 ####Miscellaneous  parameters####
 
-#####`downloadURL`
+#####`download_url`
 Where to download the stash binaries from. Default: 'http://www.atlassian.com/software/stash/downloads/binary/'
+#####`checksum`
+The md5 checksum of the archive file. Only supported with `deploy_module => archive`. Defaults to 'undef'
 #####`service_manage`
 Should puppet manage this service? Default: true
 #####`$service_ensure`
@@ -263,27 +269,28 @@ Manage the stash service, defaults to 'running'
 Defaults to 'true'
 #####`$stop_stash`
 If the stash service is managed outside of puppet the stop_stash paramater can be used to shut down stash for upgrades. Defaults to 'service stash stop && sleep 15'
-#####`git_manage`
-Should stash manage the git package. Can be 'true' or 'false', defaults to true.
-#####`git_version`
-The version of git to install. Default: 'installed'
-#####`repoforge`
-Enable the repoforge yum repository by default for RHEL as stash requires a newer version of git.
-By default we will upgrade git to a supported version if it is already installed and the repoforge repository was not enabled. Default: true
-#####`$staging_or_deploy`
-Choose whether to use nanliu-staging, or mkrakowitzer-deploy. Defaults to 'staging' to use nanliu-staging as it is puppetlabs approved. Alternative option is 'deploy' to use mkrakowitzer-deploy.
+#####`deploy_module`
+Module to use for installed stash archive fille. Supports puppet-archive and puppet-staging. Defaults to 'archive'. Archive supports md5 hash checking, Staging support s3 buckets. 
+#####`config_properties`
+Extra configuration options for stash (stash-config.properties). See https://confluence.atlassian.com/display/STASH/Stash+config+properties for available options. Must be a hash, Default: {}
 
 ####Backup parameters####
 #####`backup_ensure`
 Enable or disable the backup cron job. Defaults to present.
-#####`backupclientVersion`
-The version of the backup client to install. Defaults to '1.6.0'
+#####`backupclient_version`
+The version of the backup client to install. Defaults to '1.9.1'
 #####`backup_home`
 Home directory to use for backups. Backups are created here under /archive. Defaults to '/opt/stash-backup'.
 #####`backupuser`
 The username to use to initiate the stash backup. Defaults to 'admin'
 #####`backuppass`
 The password to use to initiate the stash backup. Defaults to 'password'
+#####`backup_keep_age`
+How long to keep the backup archives for. You can choose seconds, minutes, hours, days, or weeks by specifying the first letter of any of those words (e.g., ‘1w’). Specifying 0 will remove all files.
+#####`backup_schedule_hour`
+Hour schedule for when to perform backup. Defaults to '5'.
+#####`backup_schedule_minute`
+Minute schedule for when to perform backup. Defaults to '0'.
 
 ##Limitations
 * Puppet 3.4+

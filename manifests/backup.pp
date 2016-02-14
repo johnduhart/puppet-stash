@@ -5,21 +5,24 @@
 #
 class stash::backup(
   $ensure               = $stash::backup_ensure,
+  $schedule_hour        = $stash::backup_schedule_hour,
+  $schedule_minute      = $stash::backup_schedule_minute,
   $backupuser           = $stash::backupuser,
   $backuppass           = $stash::backuppass,
-  $version              = $stash::backupclientVersion,
+  $version              = $stash::backupclient_version,
   $product              = $stash::product,
   $format               = $stash::format,
   $homedir              = $stash::homedir,
   $user                 = $stash::user,
   $group                = $stash::group,
-  $downloadURL          = $stash::backupclientURL,
-  $s_or_d               = $stash::staging_or_deploy,
+  $deploy_module        = $stash::deploy_module,
+  $download_url          = $stash::backupclient_url,
   $backup_home          = $stash::backup_home,
+  $javahome             = $stash::javahome,
+  $keep_age             = $stash::backup_keep_age,
   ) {
 
   $appdir = "${backup_home}/${product}-backup-client-${version}"
-
 
   file { $backup_home:
     ensure => 'directory',
@@ -32,18 +35,19 @@ class stash::backup(
     group  => $group,
   }
 
-  # Deploy files using either staging or deploy modules.
   $file = "${product}-backup-distribution-${version}.${format}"
-  case $s_or_d {
+
+  file { $appdir:
+    ensure => 'directory',
+    owner  => $user,
+    group  => $group,
+  }
+
+  case $deploy_module {
     'staging': {
       require staging
-      file { $appdir:
-        ensure => 'directory',
-        owner  => $user,
-        group  => $group,
-      }
       staging::file { $file:
-        source  => "${downloadURL}/${version}/${file}",
+        source  => "${download_url}/${version}/${file}",
         timeout => 1800,
       } ->
       staging::extract { $file:
@@ -52,36 +56,50 @@ class stash::backup(
         strip   => 1,
         user    => $user,
         group   => $group,
-        require => User[$user],
+        require => [ User[$user], File[$appdir] ],
       }
     }
-    'deploy': {
-      #fail('only "staging" is supported for backup client')
-      deploy::file { $file:
-        target          => $appdir,
-        url             => $downloadURL,
-        strip           => true,
-        owner           => $user,
-        group           => $group,
-        download_timout => 1800,
-        #notify          => Exec["chown_${webappdir}"],
-        require         => [
-          File[$backup_home],
-          User[$user] ]
+    'archive': {
+      archive { "/tmp/${file}":
+        ensure       => present,
+        extract      => true,
+        extract_path => $backup_home,
+        source       => "${download_url}/${version}/${file}",
+        user         => $user,
+        group        => $group,
+        creates      => "${appdir}/lib",
+        cleanup      => true,
+        before       => File[$appdir],
       }
     }
     default: {
-      fail('staging_or_deploy parameter must equal "staging" or "deploy"')
+      fail('deploy_module parameter must equal "archive" or staging""')
     }
   }
+
+  if $javahome {
+    $java_bin = "${javahome}/bin/java"
+  } else {
+    $java_bin = '/usr/bin/java'
+  }
+
   # Enable Cronjob
-  $backup_cmd = "/usr/bin/java -Dstash.password=\"${backuppass}\" -Dstash.user=\"${backupuser}\" -Dstash.baseUrl=\"http://localhost:7990\" -Dstash.home=${homedir} -Dbackup.home=${backup_home}/archives -jar ${appdir}/stash-backup-client.jar"
+  $backup_cmd = "${java_bin} -Dstash.password=\"${backuppass}\" -Dstash.user=\"${backupuser}\" -Dstash.baseUrl=\"http://localhost:7990\" -Dstash.home=${homedir} -Dbackup.home=${backup_home}/archives -jar ${appdir}/stash-backup-client.jar"
 
   cron { 'Backup Stash':
     ensure  => $ensure,
     command => $backup_cmd,
     user    => $user,
-    hour    => 5,
-    minute  => 0,
+    hour    => $schedule_hour,
+    minute  => $schedule_minute,
   }
+
+  tidy { 'remove_old_archives':
+    path    => "${backup_home}/archives",
+    age     => $keep_age,
+    matches => '*.tar',
+    type    => 'mtime',
+    recurse => 2,
+  }
+
 }
