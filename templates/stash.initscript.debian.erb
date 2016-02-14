@@ -48,7 +48,7 @@ log_end_msg () {
 }
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
 . /lib/lsb/init-functions
- 
+
 run_with_home() {
     if [ "$RUNUSER" != "$USER" ]; then
         su - "$RUNUSER" -c "export STASH_HOME=${STASH_HOME};${STASH_INSTALLDIR}/bin/$1"
@@ -61,7 +61,7 @@ run_with_home() {
 #
 do_start()
 {
-    run_with_home start-stash.sh
+    run_with_home start-<%= scope.lookupvar('stash::product') %>.sh
 }
 #
 # Function that stops the daemon/service
@@ -69,12 +69,12 @@ do_start()
 do_stop()
 {
     if [ -e $PIDFILE ]; then
-      run_with_home stop-stash.sh
+      run_with_home stop-<%= scope.lookupvar('stash::product') %>.sh
     else
       log_failure_msg "$NAME is not running."
     fi
 }
- 
+
 case "$1" in
   start)
     [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"

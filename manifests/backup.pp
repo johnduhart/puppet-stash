@@ -10,7 +10,7 @@ class stash::backup(
   $backupuser           = $stash::backupuser,
   $backuppass           = $stash::backuppass,
   $version              = $stash::backupclient_version,
-  $product              = $stash::product,
+  $product              = 'stash',
   $format               = $stash::format,
   $homedir              = $stash::homedir,
   $user                 = $stash::user,
