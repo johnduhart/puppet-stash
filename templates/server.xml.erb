@@ -57,7 +57,7 @@
                   unpackWARs="true" autoDeploy="true"
                   xmlValidation="false" xmlNamespaceAware="false">
 
-                <Context docBase="${catalina.home}/atlassian-stash"
+                <Context docBase="${catalina.home}/atlassian-<%= @product %>"
                          path="<%= @context_path %>"
                          reloadable="false"
                          useHttpOnly="true"/>
